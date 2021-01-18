@@ -17,6 +17,7 @@
   },
   "scripts": {
     "dev": "webpack --mode=development",
+    "prod": "webpack --mode=production",
     "start": "webpack serve --mode=development"
   },
   "author": "Helena",
