@@ -1,53 +1,31 @@
-import "./style.css";
-
 const tzhm = document.getElementById("tzhm");
 const tzhmtz = document.getElementById("tzhm-tz");
 const moment = require("moment-timezone");
 const helpers = require("./helpers.json");
+const participants = require("./participants.json");
+const startTime = '2021-01-25T08:00:00';
+const endTime = '2021-01-29T18:00:00';
+const workshopDays = moment(endTime).diff(moment(startTime), 'days') + 1;
+const startMoment = moment(startTime);
+// todo: this ensures we finish the last hours of the last tz. todo: calc.
+const magicHours = 8;
+
+// import things
+import "./style.css";
+import {peopleWorkingThen, relativeWorkingHours, leftpad, onlyUnique, getContrastColor, daysOfWeek } from  "./lib.js";
 
 
-function onlyUnique(value, index, self) {
-	return self.indexOf(value) === index;
-}
-
-function leftpad(str, len, ch) {
-	str = String(str);
-	var i = -1;
-	if (!ch && ch !== 0) ch = " ";
-	len = len - str.length;
-	while (++i < len) {
-		str = ch + str;
-	}
-	return str;
-}
 
 // We'll calculate the time in each of these.
-var tzDisplay = [
-	"Pacific/Auckland",
-	"Australia/Melbourne",
-	"Australia/Perth",
-	"Asia/Hong_Kong",
-	"Asia/Kolkata",
-	"Asia/Karachi",
-	"Europe/Istanbul",
-	"Africa/Cairo",
-	"Europe/Vilnius",
-	"Europe/Paris",
-	"Atlantic/Reykjavik",
-	"America/Sao_Paulo",
-	"America/Caracas",
-	"America/New_York",
-	"America/Chicago",
-	"America/Denver",
-	"America/Los_Angeles",
-	"America/Anchorage",
-	"Pacific/Midway"
-];
+var tzExtra = [...Object.keys(participants), ...helpers.map(x => x.TZ)].filter(onlyUnique);
+tzExtra.sort((a, b) => moment.tz.zone(a).utcOffset(startMoment) >  moment.tz.zone(b).utcOffset(startMoment))
+const tzDisplay = tzExtra;
+
 
 var tzMap = tzDisplay.map(tz => {
-	var converted = [...Array(24 * 5).keys()].map(hourN => {
+	var converted = [...Array((24 * workshopDays) + magicHours).keys()].map(hourN => {
 		var hour = leftpad("" + hourN, 2, "0"),
-			convertedTime = moment(`2021-01-25T08:00:00+11:00`)
+			convertedTime = moment.tz(startTime, tzDisplay[0])
 				.tz(tz)
 				.add(hourN, "hours"),
 			h = parseInt(convertedTime.format("H"));
@@ -58,34 +36,58 @@ var tzMap = tzDisplay.map(tz => {
 			return convertedTime.format("HH mm").split(" ");
 		}
 	});
-	return [tz, moment(`2021-01-25T08:00:00+11:00`).tz(tz), ...converted];
+	return [tz, moment.tz(startTime, tzDisplay[0]).tz(tz), ...converted];
 });
 
+// Create the table for every timezone.
 tzMap.forEach(row => {
-	var elrow = document.createElement("tr");
-	elrow.id = "r_" + row[0];
-	// append the row
-	tzhm.appendChild(elrow);
-	// for each hour, append an element
-
 	// City
 	var elrow2 = document.createElement("tr");
 	elrow2.id = "r_" + row[0];
 	tzhmtz.appendChild(elrow2);
-
+	// The cell
 	var elcell = document.createElement("td");
 	elcell.innerHTML = `<div class="city">${row[0]}</div><div class="offset">${row[1].format()}</div>`;
 	elrow2.append(elcell);
+	// Helpers
+	var el_helpers = document.createElement("td");
+	el_helpers.id = `h_${row[0]}`;
+	el_helpers.innerHTML = `0`;
+	el_helpers.classList.add('tzt');
+	elrow2.append(el_helpers);
+	// Participants
+	var el_participants = document.createElement("td");
+	el_participants.id = `p_${row[0]}`;
+	el_participants.innerHTML = `0`;
+	el_participants.classList.add('tzt');
+	elrow2.append(el_participants);
 	console.log(row[0], row[1].format("DD"));
 
+	// Timezones
+	var elrow = document.createElement("tr");
+	elrow.id = "r_" + row[0];
+	tzhm.appendChild(elrow);
 	var mutTime = moment(row[1]);
+
+	var tzLocalStart = moment.tz(startTime, row[0]),
+	    tzLocalEnd = moment.tz(endTime, row[0]);
+
+	// For each hour of the event.
 	row.slice(2).forEach((timePoint, index) => {
 		var elcell = document.createElement("td");
 
-		elcell.id = `${mutTime.format()}q${row[1].format()}q${mutTime.tz(row[0]).format("DD")}`;
-		var day = mutTime.tz(row[0]).format("DD"),
-			utc_hour = mutTime.tz("UTC").format("HH");
-		elcell.classList.add(`c_${day}_${utc_hour}`);
+		var timeDay = mutTime.tz(row[0]);
+		var isBefore = mutTime.tz(row[0]).isBefore(tzLocalStart),
+			isAfter = mutTime.tz(row[0]).isAfter(tzLocalEnd);
+
+		elcell.classList.add(`c_${mutTime.tz("UTC").format("DD_HH")}`);
+		if(isBefore){
+			elcell.classList.add(`before_start`);
+		} else if(isAfter){
+			elcell.classList.add(`after_end`);
+		} else {
+			elcell.classList.add(`during`);
+		}
 
 		// Increase hours, unfortunately modifies own object.
 		mutTime.add(1, "hours");
@@ -101,81 +103,59 @@ tzMap.forEach(row => {
 
 		var cH = parseInt(timePoint[0]);
 		elcell.classList.add("tzt");
-		if (cH >= 8 && cH <= 17) {
+		if (cH >= 8 && cH < 20) {
 			elcell.classList.add("work");
-		} else if (cH > 17 && cH < 20) {
-			elcell.classList.add("work-late");
 		} else {
 			elcell.classList.add("sleep");
 		}
 	});
 });
 
-var helperCountByClass = {};
-var maxHelpers = 0;
+var collectedHelpers = peopleWorkingThen(helpers);
+var maxHelpers = Math.max(...Object.keys(collectedHelpers).map(x => collectedHelpers[x].length));
 
-var daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+var collectedParticipants = peopleWorkingThen(relativeWorkingHours(participants));
+var maxParticipants = Math.max(...Object.keys(participants).map(k => participants[k]))
+var maxParticipantsTZ = Math.max(...Object.keys(collectedParticipants).map(x => collectedParticipants[x].length));
 
+// Heatmap participants
+Object.keys(participants).forEach(tz => {
+	var p = document.getElementById(`p_${tz}`);
+	var p_count = participants[tz]
+	p.innerHTML = p_count;
+	p.setAttribute('title', `${p_count} Participants`);
+	var pct = p_count / maxParticipants
+	p.style.background = `rgba(0, 0, 255, ${pct})`;
+	p.style.color = getContrastColor(0, 0, 255, pct);
+})
+
+// Heatmap helpers
 helpers.forEach(helper => {
-	console.log(helper.Name, helper.TZ);
-	daysOfWeek.forEach((day, index) => {
-		console.log("   ", day);
-		for (var hour = 7; hour < 20; hour++) {
-			var k = "" + hour;
-
-			if (helper[k] && helper[k].indexOf(day) >= 0) {
-				var lpH = leftpad(hour, 2, "0");
-				var hm = moment.tz(`2021-01-25T${lpH}:00:00`, helper.TZ).add(index, "days");
-				var hmTomorrow = moment(hm).add(1, 'days');
-
-				var cls1 = "c_" + hm.format("DD") + "_" + hm.tz("UTC").format("HH");
-				var cls2 = "c_" + hmTomorrow.format("DD") + "_" + hm.tz("UTC").format("HH");
-
-				/*console.log("     ", hm.format(), hm.format("DD_HH"), hm.tz("UTC").format("DD_HH"));*/
-
-				if (helperCountByClass[cls1] === undefined) {
-					helperCountByClass[cls1] = {'i': 0, 'h': []};
-				}
-				// Count the helpers in that slot.
-				helperCountByClass[cls1].i = helperCountByClass[cls1].i + 1;
-
-				if (helperCountByClass[cls1].i > maxHelpers) {
-					maxHelpers = helperCountByClass[cls1].i
-				}
+	// Count our helpers
+	var h = document.getElementById(`h_${helper.TZ}`);
+	var h_count = parseInt(h.innerHTML) + 1;
+	h.innerHTML = h_count;
+	h.setAttribute('title', `${h_count} Helpers`);
+	var pct = h_count / maxHelpers;
+	h.style.background = `rgba(0, 255, 0, ${pct})`;
+	h.style.color = getContrastColor(0, 255, 0, pct);
+})
 
 
-				if (helperCountByClass[cls2] === undefined) {
-					helperCountByClass[cls2] = {'i': 0, 'h': []};
-				}
-				// Count the helpers in that slot.
-				helperCountByClass[cls2].i = helperCountByClass[cls2].i + 1;
+var colHelpersKeys = Object.keys(collectedHelpers);
+var colParticipantsKeys = Object.keys(collectedParticipants);
 
-				if (helperCountByClass[cls2].i > maxHelpers) {
-					maxHelpers = helperCountByClass[cls2].i;
-				}
+[...colHelpersKeys, ...colParticipantsKeys].filter(onlyUnique).forEach(k => {
+	// var pct = collectedHelpers[k].length / maxHelpers;
+	var hl = collectedHelpers[k].length,
+		pl = collectedParticipants[k].length;
+	var pct = hl / pl;
+	var peeps = collectedHelpers[k].filter(onlyUnique).join(', ')
 
-				helperCountByClass[cls1].h.push(helper.Name);
-				helperCountByClass[cls2].h.push(helper.Name);
-
-			}
-		}
+	document.querySelectorAll(`.${k}.work.during`).forEach(x => {
+		x.style.background = `rgba(0, 255, 0, ${pct})`;
+		x.setAttribute('title', `Ratio: ${hl}:${pl}, Instructors ${peeps}`);
 	});
 });
-
-Object.keys(helperCountByClass).forEach(k => {
-	var pct = helperCountByClass[k].i / maxHelpers;
-	var peeps = helperCountByClass[k].h.filter(onlyUnique).join(', ')
-
-	document.querySelectorAll(`.${k}.work`).forEach(x => {
-		x.style.background = `rgba(0, 255, 0, ${pct})`;
-		x.setAttribute('title', peeps);
-	});
-	document.querySelectorAll(`.${k}.work-late`).forEach(x => {
-		x.style.background = `rgba(0, 255, 0, ${pct})`;
-		x.setAttribute('title', peeps);
-	});
-});
-/*console.log(maxHelpers)*/
-/*console.log(helperCountByClass)*/
 
 window.moment = moment;

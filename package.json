@@ -16,8 +16,8 @@
     "webpack-dev-server": "^3.11.2"
   },
   "scripts": {
-    "dev": "webpack --mode development",
-    "start": "webpack serve"
+    "dev": "webpack --mode=development",
+    "start": "webpack serve --mode=development"
   },
   "author": "Helena",
   "license": "AGPL-3.0"

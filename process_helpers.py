@@ -35,7 +35,14 @@ for row in data:
     for (hourSection, col) in zip(header[2:], row[2:]):
         (startHour, endHour) = map(int, hourSection.split('-'))
         for o in range(startHour, endHour):
-            rm[o] = col
+            for dayOfWeek in col:
+                if dayOfWeek not in rm:
+                    rm[dayOfWeek] = []
+
+                rm[dayOfWeek].append(o)
+    # ew
+    if '' in rm:
+        del rm['']
     out.append(rm)
 
 print(json.dumps(out))

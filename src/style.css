@@ -7,7 +7,7 @@ h1 {
 	color: red
 }
 
-td.sleep {
+td.sleep, td.before_start, td.after_end {
 	color: #ccc;
 }
 
@@ -25,14 +25,14 @@ td.sleep {
 	text-align: right;
 }
 
-.h, .mon {
-	font-size: 120%;
-}
 .m {
 	font-size: 80%;
 }
+
 .tzt {
 	text-align: center;
+	font-size: 120%;
+	min-width: 1.5em;
 }
 
 #container {
