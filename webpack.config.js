@@ -12,8 +12,12 @@ module.exports = {
       }
     ]
   },
+	output: {
+		    path: path.resolve(__dirname, "docs")
+	},
   plugins: [
     new HtmlWebpackPlugin({
+		publicPath: '/timezone-heatmap',
       template: path.resolve(__dirname, "src", "index.html")
     }),
           // To keep all zones but limit data to specific years, use the year range options
