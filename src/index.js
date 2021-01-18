@@ -3,29 +3,27 @@ const tzhmtz = document.getElementById("tzhm-tz");
 const moment = require("moment-timezone");
 const helpers = require("./helpers.json");
 const participants = require("./participants.json");
-const startTime = '2021-01-25T08:00:00';
-const endTime = '2021-01-29T18:00:00';
-const workshopDays = moment(endTime).diff(moment(startTime), 'days') + 1;
+const startTime = "2021-01-25T08:00:00";
+const endTime = "2021-01-29T18:00:00";
+const workshopDays = moment(endTime).diff(moment(startTime), "days") + 1;
 const startMoment = moment(startTime);
 // todo: this ensures we finish the last hours of the last tz. todo: calc.
 const magicHours = 8;
 
 // import things
 import "./style.css";
-import {peopleWorkingThen, relativeWorkingHours, leftpad, onlyUnique, getContrastColor, daysOfWeek } from  "./lib.js";
-
-
+import { peopleWorkingThen, relativeWorkingHours, leftpad, onlyUnique, getContrastColor, daysOfWeek } from "./lib.js";
 
 // We'll calculate the time in each of these.
 var tzExtra = [...Object.keys(participants), ...helpers.map(x => x.TZ)].filter(onlyUnique);
-tzExtra.sort((a, b) => moment.tz.zone(a).utcOffset(startMoment) >  moment.tz.zone(b).utcOffset(startMoment))
+tzExtra.sort((a, b) => moment.tz.zone(a).utcOffset(startMoment) > moment.tz.zone(b).utcOffset(startMoment));
 const tzDisplay = tzExtra;
 
-
 var tzMap = tzDisplay.map(tz => {
-	var converted = [...Array((24 * workshopDays) + magicHours).keys()].map(hourN => {
+	var converted = [...Array(24 * workshopDays + magicHours).keys()].map(hourN => {
 		var hour = leftpad("" + hourN, 2, "0"),
-			convertedTime = moment.tz(startTime, tzDisplay[0])
+			convertedTime = moment
+				.tz(startTime, tzDisplay[0])
 				.tz(tz)
 				.add(hourN, "hours"),
 			h = parseInt(convertedTime.format("H"));
@@ -53,13 +51,13 @@ tzMap.forEach(row => {
 	var el_helpers = document.createElement("td");
 	el_helpers.id = `h_${row[0]}`;
 	el_helpers.innerHTML = `0`;
-	el_helpers.classList.add('tzt');
+	el_helpers.classList.add("tzt");
 	elrow2.append(el_helpers);
 	// Participants
 	var el_participants = document.createElement("td");
 	el_participants.id = `p_${row[0]}`;
 	el_participants.innerHTML = `0`;
-	el_participants.classList.add('tzt');
+	el_participants.classList.add("tzt");
 	elrow2.append(el_participants);
 	console.log(row[0], row[1].format("DD"));
 
@@ -70,7 +68,7 @@ tzMap.forEach(row => {
 	var mutTime = moment(row[1]);
 
 	var tzLocalStart = moment.tz(startTime, row[0]),
-	    tzLocalEnd = moment.tz(endTime, row[0]);
+		tzLocalEnd = moment.tz(endTime, row[0]);
 
 	// For each hour of the event.
 	row.slice(2).forEach((timePoint, index) => {
@@ -81,9 +79,9 @@ tzMap.forEach(row => {
 			isAfter = mutTime.tz(row[0]).isAfter(tzLocalEnd);
 
 		elcell.classList.add(`c_${mutTime.tz("UTC").format("DD_HH")}`);
-		if(isBefore){
+		if (isBefore) {
 			elcell.classList.add(`before_start`);
-		} else if(isAfter){
+		} else if (isAfter) {
 			elcell.classList.add(`after_end`);
 		} else {
 			elcell.classList.add(`during`);
@@ -115,19 +113,19 @@ var collectedHelpers = peopleWorkingThen(helpers);
 var maxHelpers = Math.max(...Object.keys(collectedHelpers).map(x => collectedHelpers[x].length));
 
 var collectedParticipants = peopleWorkingThen(relativeWorkingHours(participants));
-var maxParticipants = Math.max(...Object.keys(participants).map(k => participants[k]))
+var maxParticipants = Math.max(...Object.keys(participants).map(k => participants[k]));
 var maxParticipantsTZ = Math.max(...Object.keys(collectedParticipants).map(x => collectedParticipants[x].length));
 
 // Heatmap participants
 Object.keys(participants).forEach(tz => {
 	var p = document.getElementById(`p_${tz}`);
-	var p_count = participants[tz]
+	var p_count = participants[tz];
 	p.innerHTML = p_count;
-	p.setAttribute('title', `${p_count} Participants`);
-	var pct = p_count / maxParticipants
+	p.setAttribute("title", `${p_count} Participants`);
+	var pct = p_count / maxParticipants;
 	p.style.background = `rgba(0, 0, 255, ${pct})`;
 	p.style.color = getContrastColor(0, 0, 255, pct);
-})
+});
 
 // Heatmap helpers
 helpers.forEach(helper => {
@@ -135,12 +133,11 @@ helpers.forEach(helper => {
 	var h = document.getElementById(`h_${helper.TZ}`);
 	var h_count = parseInt(h.innerHTML) + 1;
 	h.innerHTML = h_count;
-	h.setAttribute('title', `${h_count} Helpers`);
+	h.setAttribute("title", `${h_count} Helpers`);
 	var pct = h_count / maxHelpers;
 	h.style.background = `rgba(0, 255, 0, ${pct})`;
 	h.style.color = getContrastColor(0, 255, 0, pct);
-})
-
+});
 
 var colHelpersKeys = Object.keys(collectedHelpers);
 var colParticipantsKeys = Object.keys(collectedParticipants);
@@ -150,11 +147,11 @@ var colParticipantsKeys = Object.keys(collectedParticipants);
 	var hl = collectedHelpers[k].length,
 		pl = collectedParticipants[k].length;
 	var pct = hl / pl;
-	var peeps = collectedHelpers[k].filter(onlyUnique).join(', ')
+	var peeps = collectedHelpers[k].filter(onlyUnique).join(", ");
 
 	document.querySelectorAll(`.${k}.work.during`).forEach(x => {
 		x.style.background = `rgba(0, 255, 0, ${pct})`;
-		x.setAttribute('title', `Ratio: ${hl}:${pl}, Instructors ${peeps}`);
+		x.setAttribute("title", `Ratio: ${hl}:${pl}, Instructors ${peeps}`);
 	});
 });
 
