@@ -1,0 +1,36 @@
+body {
+	font-family: monospace;
+}
+
+
+h1 {
+	color: red
+}
+
+td.sleep {
+	color: #ccc;
+}
+
+td.sleep .mon, td.sleep.day {
+	color: black;
+}
+
+.city {
+	font-size: 120%;
+	font-weight: bold;
+	text-align: right;
+}
+.offset {
+	font-size: 120%;
+	text-align: right;
+}
+
+.h, .mon {
+	font-size: 120%;
+}
+.m {
+	font-size: 80%;
+}
+.tzt {
+	text-align: center;
+}
