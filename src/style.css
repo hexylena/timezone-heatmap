@@ -11,7 +11,7 @@ td.sleep {
 	color: #ccc;
 }
 
-td.sleep .mon, td.sleep.day {
+.day, .mon {
 	color: black;
 }
 
@@ -33,4 +33,23 @@ td.sleep .mon, td.sleep.day {
 }
 .tzt {
 	text-align: center;
+}
+
+#container {
+	display: flex;
+	flex-direction: row;
+}
+
+#tzhm {
+	overflow-x: scroll;
+	width: 80%;
+	display: block;
+}
+
+#tzhm-tz {
+	border-right: 1px solid black;
+}
+
+#tzhm-tz td, #tzhm td {
+	height: 50px;
 }

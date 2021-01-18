@@ -1,6 +1,7 @@
 import "./style.css";
 
 const tzhm = document.getElementById("tzhm");
+const tzhmtz = document.getElementById("tzhm-tz");
 const moment = require("moment-timezone");
 const helpers = require("./helpers.json");
 
@@ -68,9 +69,13 @@ tzMap.forEach(row => {
 	// for each hour, append an element
 
 	// City
+	var elrow2 = document.createElement("tr");
+	elrow2.id = "r_" + row[0];
+	tzhmtz.appendChild(elrow2);
+
 	var elcell = document.createElement("td");
 	elcell.innerHTML = `<div class="city">${row[0]}</div><div class="offset">${row[1].format()}</div>`;
-	elrow.append(elcell);
+	elrow2.append(elcell);
 	console.log(row[0], row[1].format("DD"));
 
 	var mutTime = moment(row[1]);
