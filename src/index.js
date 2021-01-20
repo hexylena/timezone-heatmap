@@ -19,6 +19,7 @@ var tzExtra = [...Object.keys(participants), ...helpers.map(x => x.TZ)].filter(o
 tzExtra.sort((a, b) => moment.tz.zone(a).utcOffset(startMoment) > moment.tz.zone(b).utcOffset(startMoment));
 const tzDisplay = tzExtra;
 
+
 var tzMap = tzDisplay.map(tz => {
 	var converted = [...Array(24 * workshopDays + magicHours).keys()].map(hourN => {
 		var hour = leftpad("" + hourN, 2, "0"),
