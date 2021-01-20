@@ -1,7 +1,7 @@
 run: src/helpers.json src/participants.json
 	npm start
 
-prod:
+build: src/helpers.json src/participants.json
 	npm run prod
 
 src/helpers.json: example/helpers.tsv process_helpers.py
