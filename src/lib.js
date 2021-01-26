@@ -128,7 +128,7 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 		el_participants.innerHTML = `0`;
 		el_participants.classList.add("tzt");
 		elrow2.append(el_participants);
-		console.log(row[0], row[1].format("DD"));
+		//console.log(row[0], row[1].format("DD"));
 
 		// Timezones
 		var elrow = document.createElement("tr");
@@ -246,6 +246,10 @@ export function combinationTimeZoneHeatMap(config, helpers, participants) {
 	const endTime = config.end;
 	const workshopDays = moment(endTime).diff(moment(startTime), "days") + 1;
 	const startMoment = moment(startTime);
+
+	var newtitle = `Time Zone Heat Map: ${config.title}`;
+	document.getElementById('title').textContent = newtitle;
+	document.title = newtitle;
 
 	// We'll calculate the time in each of these.
 	var tzDisplay = [...Object.keys(participants), ...helpers.map(x => x.TZ), userTZ].filter(onlyUnique);
