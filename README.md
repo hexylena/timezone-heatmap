@@ -11,3 +11,7 @@ Discover helper:student ratio issues in global training events.
 3. Edit `src/config.json`
 4. `make` to run locally or `make build` to compile
 5. done
+
+## License
+
+AGPL-3.0
