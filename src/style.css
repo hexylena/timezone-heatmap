@@ -11,6 +11,10 @@ td.sleep, td.before_start, td.after_end {
 	color: #ccc;
 }
 
+td.thepast.sleep {
+	background: #555;
+}
+
 .day, .mon {
 	color: black;
 }
@@ -56,4 +60,9 @@ td.sleep, td.before_start, td.after_end {
 
 #tzhm-tz td, #tzhm td {
 	height: 50px;
+}
+
+tr.viewer td {
+	border-top: 2px solid red;
+	border-bottom: 2px solid red;
 }

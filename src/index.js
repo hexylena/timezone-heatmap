@@ -14,8 +14,11 @@ const magicHours = 8;
 import "./style.css";
 import { peopleWorkingThen, relativeWorkingHours, leftpad, onlyUnique, getContrastColor, daysOfWeek } from "./lib.js";
 
+const userTZ = moment.tz.guess();
+const now = moment.tz(userTZ);
+
 // We'll calculate the time in each of these.
-var tzExtra = [...Object.keys(participants), ...helpers.map(x => x.TZ)].filter(onlyUnique);
+var tzExtra = [...Object.keys(participants), ...helpers.map(x => x.TZ), userTZ].filter(onlyUnique);
 tzExtra.sort((a, b) => moment.tz.zone(a).utcOffset(startMoment) > moment.tz.zone(b).utcOffset(startMoment));
 const tzDisplay = tzExtra;
 
@@ -44,6 +47,9 @@ tzMap.forEach(row => {
 	var elrow2 = document.createElement("tr");
 	elrow2.id = "r_" + row[0];
 	tzhmtz.appendChild(elrow2);
+	if(row[0] === userTZ){
+		elrow2.classList.add("viewer");
+	}
 	// The cell
 	var elcell = document.createElement("td");
 	elcell.innerHTML = `<div class="city">${row[0]}</div><div class="offset">${row[1].format()}</div>`;
@@ -64,7 +70,10 @@ tzMap.forEach(row => {
 
 	// Timezones
 	var elrow = document.createElement("tr");
-	elrow.id = "r_" + row[0];
+	elrow.id = "tr_" + row[0];
+	if(row[0] === userTZ){
+		elrow.classList.add("viewer");
+	}
 	tzhm.appendChild(elrow);
 	var mutTime = moment(row[1]);
 
@@ -76,8 +85,9 @@ tzMap.forEach(row => {
 		var elcell = document.createElement("td");
 
 		var timeDay = mutTime.tz(row[0]);
-		var isBefore = mutTime.tz(row[0]).isBefore(tzLocalStart),
-			isAfter = mutTime.tz(row[0]).isAfter(tzLocalEnd);
+		var isBefore = timeDay.isBefore(tzLocalStart),
+			isAfter = timeDay.isAfter(tzLocalEnd),
+			beforeNow = timeDay.isBefore(now);
 
 		elcell.classList.add(`c_${mutTime.tz("UTC").format("DD_HH")}`);
 		if (isBefore) {
@@ -86,6 +96,9 @@ tzMap.forEach(row => {
 			elcell.classList.add(`after_end`);
 		} else {
 			elcell.classList.add(`during`);
+		}
+		if (beforeNow) {
+			elcell.classList.add(`thepast`);
 		}
 
 		// Increase hours, unfortunately modifies own object.
@@ -154,6 +167,12 @@ var colParticipantsKeys = Object.keys(collectedParticipants);
 		x.style.background = `rgba(0, 255, 0, ${pct})`;
 		x.setAttribute("title", `Ratio: ${hl}:${pl}, Instructors ${peeps}`);
 	});
+	document.querySelectorAll(`.${k}.work.during.thepast`).forEach(x => {
+		x.style.background = `rgba(0, 0, 0, ${pct})`;
+		x.setAttribute("title", `Ratio: ${hl}:${pl}, Instructors ${peeps}`);
+	});
 });
 
 window.moment = moment;
+var nowCls = `c_${now.tz("UTC").format("DD_HH")}`;
+document.querySelectorAll(`#tzhm tr.viewer .${nowCls}`)[0].scrollIntoView({behavior: "smooth", block: "end", inline: "start"})
