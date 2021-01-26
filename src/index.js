@@ -2,9 +2,10 @@ const tzhm = document.getElementById("tzhm");
 const tzhmtz = document.getElementById("tzhm-tz");
 const moment = require("moment-timezone");
 const helpers = require("./helpers.json");
+const config = require("./config.json");
 const participants = require("./participants.json");
-const startTime = "2021-01-25T08:00:00";
-const endTime = "2021-01-29T18:00:00";
+const startTime = config.start;
+const endTime = config.end;
 const workshopDays = moment(endTime).diff(moment(startTime), "days") + 1;
 const startMoment = moment(startTime);
 // todo: this ensures we finish the last hours of the last tz. todo: calc.
