@@ -237,10 +237,9 @@ export function heatmapThings(participants, helpers) {
 	});
 }
 
-export function combinationTimeZoneHeatMap(config, helpers, participants) {
+export function combinationTimeZoneHeatMap(config, helpers, participants, isLive) {
 	const userTZ = moment.tz.guess();
-	const now = moment.tz(userTZ);
-	const magicHours = 8;
+	const magicHours = 9;
 
 	const startTime = config.start;
 	const endTime = config.end;
@@ -258,6 +257,8 @@ export function combinationTimeZoneHeatMap(config, helpers, participants) {
 	// Table
 	var tzMap = tzTable(tzDisplay, workshopDays, magicHours, startTime);
 
+	const now = ( isLive ? moment.tz(userTZ) : tzMap[0][1]);
+
 	// Create the table for every timezone.
 	renderTable(tzMap, userTZ, startTime, endTime, now);
 
@@ -265,6 +266,8 @@ export function combinationTimeZoneHeatMap(config, helpers, participants) {
 	heatmapThings(participants, helpers);
 
 	// Scroll to the right position
-	var nowCls = `c_${now.tz("UTC").format("DD_HH")}`;
-	document.querySelectorAll(`#tzhm tr.viewer .${nowCls}`)[0].scrollIntoView({ behavior: "smooth", block: "end", inline: "start" });
+	if(isLive && now.isBefore(moment(endTime))){
+		var nowCls = `c_${now.tz("UTC").format("DD_HH")}`;
+		document.querySelectorAll(`#tzhm tr.viewer .${nowCls}`)[0].scrollIntoView({ behavior: "smooth", block: "end", inline: "start" });
+	}
 }
