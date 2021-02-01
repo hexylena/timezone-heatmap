@@ -16,8 +16,8 @@ fetch(request)
 	.then(data => {
 		combinationTimeZoneHeatMap(data["src/config.json"], data["src/helpers.json"], data["src/participants.json"], isLive);
 	})
-	.catch((error) => {
-		console.log(error);
-		document.getElementById('messages').innerHTML = `Error loading data`
-		combinationTimeZoneHeatMap(data["src/config.json"], data["src/helpers.json"], data["src/participants.json"], isLive);
-	})
+	/*.catch((error) => {*/
+		/*console.log(error);*/
+		/*document.getElementById('messages').innerHTML = `Error loading data`*/
+		/*combinationTimeZoneHeatMap(data["src/config.json"], data["src/helpers.json"], data["src/participants.json"], isLive);*/
+	/*})*/

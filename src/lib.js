@@ -80,13 +80,18 @@ export function relativeWorkingHours(participants) {
 	return final;
 }
 
-export function tzTable(tzDisplay, workshopDays, magicHours, startTime) {
-	return tzDisplay.map(tz => {
+export function tzTable(tzDisplay, tzReduced, workshopDays, magicHours, startTime) {
+	var k = Object.keys(tzReduced)
+	k.sort((a, b) => {return parseInt(a) > parseInt(b)});
+	var earliest = tzReduced[Math.min(...k)][0];
+	return k.map(utcOff => {
+		var repTz = tzReduced[utcOff][0];
+
 		var converted = [...Array(24 * workshopDays + magicHours).keys()].map(hourN => {
 			var hour = leftpad("" + hourN, 2, "0"),
 				convertedTime = moment
 					.tz(startTime, tzDisplay[0])
-					.tz(tz)
+					.tz(repTz)
 					.add(hourN, "hours"),
 				h = parseInt(convertedTime.format("H"));
 
@@ -96,8 +101,9 @@ export function tzTable(tzDisplay, workshopDays, magicHours, startTime) {
 				return convertedTime.format("HH mm").split(" ");
 			}
 		});
-		return [tz, moment.tz(startTime, tzDisplay[0]).tz(tz), ...converted];
-	});
+		return [tzReduced[utcOff], moment.tz(startTime, earliest).tz(repTz), ...converted];
+
+	})
 }
 
 export function renderTable(tzMap, userTZ, startTime, endTime, now) {
@@ -105,48 +111,50 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 	const tzhmtz = document.getElementById("tzhm-tz");
 
 	tzMap.forEach(row => {
+		// Representative TZ
+		var repTz = row[0][0];
 		// City
 		var elrow2 = document.createElement("tr");
-		elrow2.id = "r_" + row[0];
 		tzhmtz.appendChild(elrow2);
 		if (row[0] === userTZ) {
 			elrow2.classList.add("viewer");
 		}
+		row[0].slice(1).forEach((tz) => { elrow2.classList.add(tz) });
 		// The cell
 		var elcell = document.createElement("td");
-		elcell.innerHTML = `<div class="city">${row[0]}</div><div class="offset">${row[1].format()}</div>`;
+		elcell.innerHTML = `<div class="city" title="This includes ${row[0].join(', ')}">${repTz}</div><div class="offset">${row[1].format()}</div>`;
 		elrow2.append(elcell);
 		// Helpers
 		var el_helpers = document.createElement("td");
-		el_helpers.id = `h_${row[0]}`;
+		el_helpers.id = `h_${repTz}`;
 		el_helpers.innerHTML = `0`;
 		el_helpers.classList.add("tzt");
 		elrow2.append(el_helpers);
 		// Participants
 		var el_participants = document.createElement("td");
-		el_participants.id = `p_${row[0]}`;
+		el_participants.id = `p_${repTz}`;
 		el_participants.innerHTML = `0`;
 		el_participants.classList.add("tzt");
 		elrow2.append(el_participants);
-		//console.log(row[0], row[1].format("DD"));
 
 		// Timezones
 		var elrow = document.createElement("tr");
-		elrow.id = "tr_" + row[0];
+		elrow.id = "tr_" + repTz;
+		// TODO
 		if (row[0] === userTZ) {
 			elrow.classList.add("viewer");
 		}
 		tzhm.appendChild(elrow);
 		var mutTime = moment(row[1]);
 
-		var tzLocalStart = moment.tz(startTime, row[0]),
-			tzLocalEnd = moment.tz(endTime, row[0]);
+		var tzLocalStart = moment.tz(startTime, repTz),
+			tzLocalEnd = moment.tz(endTime, repTz);
 
 		// For each hour of the event.
 		row.slice(2).forEach((timePoint, index) => {
 			var elcell = document.createElement("td");
 
-			var timeDay = mutTime.tz(row[0]);
+			var timeDay = mutTime.tz(repTz);
 			var isBefore = timeDay.isBefore(tzLocalStart),
 				isAfter = timeDay.isAfter(tzLocalEnd),
 				beforeNow = timeDay.isBefore(now);
@@ -221,10 +229,10 @@ export function heatmapThings(participants, helpers, startTime) {
 
 	[...colHelpersKeys, ...colParticipantsKeys].filter(onlyUnique).forEach(k => {
 		// var pct = collectedHelpers[k].length / maxHelpers;
-		var hl = collectedHelpers[k].length,
-			pl = collectedParticipants[k] !== undefined ? collectedParticipants[k].length : 0;
+		var hl = k in collectedHelpers ? collectedHelpers[k].length : 0,
+			pl = k in collectedParticipants ? collectedParticipants[k].length : 0;
 		var pct = pl > 0 ? hl / pl : 0;
-		var peeps = collectedHelpers[k].filter(onlyUnique).join(", ");
+		var peeps = k in collectedHelpers ? collectedHelpers[k].filter(onlyUnique).join(", ") : "NONE";
 
 		document.querySelectorAll(`.${k}.work.during`).forEach(x => {
 			x.style.background = `rgba(0, 255, 0, ${pct})`;
@@ -235,6 +243,28 @@ export function heatmapThings(participants, helpers, startTime) {
 			x.setAttribute("title", `Ratio: ${hl}:${pl}, Instructors ${peeps}`);
 		});
 	});
+}
+
+export function coerceTimezones(folks, repTzLookup){
+	if(Array.isArray(folks)){
+		return folks.map((x) => {
+			x.TZ = repTzLookup[x.TZ];
+			return x;
+		})
+		console.log(folks)
+		return folks;
+	} else {
+		var fixedParticipants = {};
+		Object.keys(folks).forEach(x => {
+			var k = repTzLookup[x];
+			if(k in fixedParticipants){
+				fixedParticipants[k] += folks[x];
+			} else {
+				fixedParticipants[k] = folks[x];
+			}
+		})
+		return fixedParticipants
+	}
 }
 
 export function combinationTimeZoneHeatMap(config, helpers, participants, isLive) {
@@ -252,10 +282,32 @@ export function combinationTimeZoneHeatMap(config, helpers, participants, isLive
 
 	// We'll calculate the time in each of these.
 	var tzDisplay = [...Object.keys(participants), ...helpers.map(x => x.TZ), userTZ].filter(onlyUnique);
+	// Remove invalid timezones.
+	tzDisplay = tzDisplay.filter((x) => { return moment.tz.zone(x); })
+	// Sort by their utcOffset
 	tzDisplay.sort((a, b) => moment.tz.zone(a).utcOffset(startMoment) > moment.tz.zone(b).utcOffset(startMoment));
 
+	// Reduce by their TZ offset, don't need 50 european states all reducing to Europe/Paris
+	var tzReduced = {};
+	tzDisplay.forEach((tz) => {
+		var k = moment.tz.zone(tz).utcOffset(startMoment);
+		if(k in tzReduced){
+			tzReduced[k].push(tz)
+		}else{
+			tzReduced[k] = [tz];
+		}
+	})
+	var repTzLookup = {};
+	tzDisplay.forEach((tz) => {
+		var k = moment.tz.zone(tz).utcOffset(startMoment);
+		repTzLookup[tz] = tzReduced[k][0];
+	})
+
+	participants = coerceTimezones(participants, repTzLookup);
+	helpers = coerceTimezones(helpers, repTzLookup);
+
 	// Table
-	var tzMap = tzTable(tzDisplay, workshopDays, magicHours, startTime);
+	var tzMap = tzTable(tzDisplay, tzReduced, workshopDays, magicHours, startTime);
 
 	const now = ( isLive ? moment.tz(userTZ) : tzMap[0][1]);
 
