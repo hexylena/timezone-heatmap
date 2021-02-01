@@ -6,7 +6,7 @@ import { combinationTimeZoneHeatMap } from "./lib.js";
 
 
 const params = (new URL(document.location)).searchParams;
-const dataLocation = params.get('data') !== null ? params.get('data') : 'gat.json';
+const dataLocation = params.get('data') !== null ? params.get('data') : 'data.json';
 const isLive = params.get('live') !== 'false';
 
 // Fetch
