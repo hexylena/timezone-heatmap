@@ -10,11 +10,11 @@ import { combinationTimeZoneHeatMap } from "./lib.js";
 
 
 const params = (new URL(document.location)).searchParams;
-const dataLocation = params.get('data')
+const dataLocation = params.get('data') !== null ? params.get('data') : 'gat.json';
 const isLive = params.get('live') !== 'false';
 
 // Fetch
-const request = new Request(dataLocation || "gat.json");
+const request = new Request(dataLocation);
 fetch(request)
 	.then(response => response.json())
 	.then(data => {
