@@ -23,7 +23,7 @@ export function leftpad(str, len, ch) {
 	return str;
 }
 
-export function peopleWorkingThen(people) {
+export function peopleWorkingThen(people, startTime) {
 	/*
 	 * [
 	 *   {'name': 'Helena', // optional
@@ -45,7 +45,7 @@ export function peopleWorkingThen(people) {
 			person[day].forEach(hour => {
 				var lpH = leftpad(hour, 2, "0");
 				// TODO: hardcoded time
-				var hm = moment.tz(`2021-01-25T${lpH}:00:00`, person.TZ).add(index, "days");
+				var hm = moment.tz(`${moment(startTime).format('YYYY-MM-DD')}T${lpH}:00:00`, person.TZ).add(index, "days");
 				var cls = "c_" + hm.format("DD") + "_" + hm.tz("UTC").format("HH");
 
 				if (namesByClass[cls] === undefined) {
@@ -186,11 +186,11 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 	});
 }
 
-export function heatmapThings(participants, helpers) {
-	var collectedHelpers = peopleWorkingThen(helpers);
+export function heatmapThings(participants, helpers, startTime) {
+	var collectedHelpers = peopleWorkingThen(helpers, startTime);
 	var maxHelpers = Math.max(...Object.keys(collectedHelpers).map(x => collectedHelpers[x].length));
 
-	var collectedParticipants = peopleWorkingThen(relativeWorkingHours(participants));
+	var collectedParticipants = peopleWorkingThen(relativeWorkingHours(participants), startTime);
 	var maxParticipants = Math.max(...Object.keys(participants).map(k => participants[k]));
 	var maxParticipantsTZ = Math.max(...Object.keys(collectedParticipants).map(x => collectedParticipants[x].length));
 
@@ -222,8 +222,8 @@ export function heatmapThings(participants, helpers) {
 	[...colHelpersKeys, ...colParticipantsKeys].filter(onlyUnique).forEach(k => {
 		// var pct = collectedHelpers[k].length / maxHelpers;
 		var hl = collectedHelpers[k].length,
-			pl = collectedParticipants[k].length;
-		var pct = hl / pl;
+			pl = collectedParticipants[k] !== undefined ? collectedParticipants[k].length : 0;
+		var pct = pl > 0 ? hl / pl : 0;
 		var peeps = collectedHelpers[k].filter(onlyUnique).join(", ");
 
 		document.querySelectorAll(`.${k}.work.during`).forEach(x => {
@@ -263,10 +263,10 @@ export function combinationTimeZoneHeatMap(config, helpers, participants, isLive
 	renderTable(tzMap, userTZ, startTime, endTime, now);
 
 	// Heatmap things to make them pretty
-	heatmapThings(participants, helpers);
+	heatmapThings(participants, helpers, startTime);
 
 	// Scroll to the right position
-	if(isLive && now.isBefore(moment(endTime))){
+	if(isLive && now.isAfter(moment(startTime)) && now.isBefore(moment(endTime))){
 		var nowCls = `c_${now.tz("UTC").format("DD_HH")}`;
 		document.querySelectorAll(`#tzhm tr.viewer .${nowCls}`)[0].scrollIntoView({ behavior: "smooth", block: "end", inline: "start" });
 	}

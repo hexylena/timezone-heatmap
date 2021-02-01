@@ -1,8 +1,4 @@
 const moment = require("moment-timezone");
-/*const helpers = require("./helpers.json");*/
-/*const config = require("./config.json");*/
-/*const participants = require("./participants.json");*/
-// todo: this ensures we finish the last hours of the last tz. todo: calc.
 
 // import things
 import "./style.css";
@@ -22,6 +18,6 @@ fetch(request)
 	})
 	.catch((error) => {
 		console.log(error);
-		document.getElementById('messages').innerHTML = `Error: Could not access ${dataLocation}`
+		document.getElementById('messages').innerHTML = `Error loading data`
 		combinationTimeZoneHeatMap(data["src/config.json"], data["src/helpers.json"], data["src/participants.json"], isLive);
 	})
