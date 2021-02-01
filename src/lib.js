@@ -3,6 +3,7 @@ const moment = require("moment-timezone");
 // https://stackoverflow.com/questions/3942878/how-to-decide-font-color-in-white-or-black-depending-on-background-color/58427960#58427960
 export const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 export const workingHours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+const arraySum = (accumulator, currentValue) => accumulator + currentValue;
 export function getContrastColor(R, G, B, A) {
 	const brightness = R * 0.299 + G * 0.587 + B * 0.114 + (1 - A) * 255;
 	return brightness > 186 ? "#000000" : "#FFFFFF";
@@ -11,6 +12,8 @@ export function getContrastColor(R, G, B, A) {
 export function onlyUnique(value, index, self) {
 	return self.indexOf(value) === index;
 }
+
+var memo = {};
 
 export function leftpad(str, len, ch) {
 	str = String(str);
@@ -21,6 +24,16 @@ export function leftpad(str, len, ch) {
 		str = ch + str;
 	}
 	return str;
+}
+
+export function memoPersonWorking(fmtStart, hour, tz, index){
+	var k = `${fmtStart}/${hour}/${tz}/${index}`;
+	if(!(k in memo)){
+		var hm = moment.tz(`${fmtStart}T${leftpad(hour, 2, "0")}:00:00`, tz).add(index, "days");
+		var cls = "c_" + hm.format("DD") + "_" + hm.tz("UTC").format("HH");
+		memo[k] = cls;
+	}
+	return memo[k];
 }
 
 export function peopleWorkingThen(people, startTime) {
@@ -36,6 +49,8 @@ export function peopleWorkingThen(people, startTime) {
 	 *    }
 	 * ]
 	 **/
+	const fmtStart = moment(startTime).format('YYYY-MM-DD');
+
 	var namesByClass = {};
 	people.forEach(person => {
 		daysOfWeek.forEach((day, index) => {
@@ -43,9 +58,7 @@ export function peopleWorkingThen(people, startTime) {
 				return;
 			}
 			person[day].forEach(hour => {
-				var lpH = leftpad(hour, 2, "0");
-				var hm = moment.tz(`${moment(startTime).format('YYYY-MM-DD')}T${lpH}:00:00`, person.TZ).add(index, "days");
-				var cls = "c_" + hm.format("DD") + "_" + hm.tz("UTC").format("HH");
+				var cls = memoPersonWorking(fmtStart, hour, person.TZ, index);
 
 				if (namesByClass[cls] === undefined) {
 					namesByClass[cls] = [];
@@ -87,12 +100,12 @@ export function tzTable(tzDisplay, tzReduced, workshopDays, magicHours, startTim
 	var earliest = tzReduced[Math.min(...k)][0];
 	return k.map(utcOff => {
 		var repTz = tzReduced[utcOff][0];
+		var inconvtime = moment
+			.tz(startTime, tzDisplay[0])
+			.tz(repTz);
+
 		var converted = [...Array(24 * workshopDays + magicHours).keys()].map(hourN => {
-			var hour = leftpad("" + hourN, 2, "0"),
-				convertedTime = moment
-					.tz(startTime, tzDisplay[0])
-					.tz(repTz)
-					.add(hourN, "hours"),
+			var convertedTime = moment(inconvtime).add(hourN, "hours"),
 				h = parseInt(convertedTime.format("H"));
 
 			if (h === 0) {
@@ -102,7 +115,6 @@ export function tzTable(tzDisplay, tzReduced, workshopDays, magicHours, startTim
 			}
 		});
 		return [tzReduced[utcOff], moment.tz(startTime, earliest).tz(repTz), ...converted];
-
 	})
 }
 
@@ -110,12 +122,11 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 	const tzhm = document.getElementById("tzhm");
 	const tzhmtz = document.getElementById("tzhm-tz");
 
-	tzMap.forEach(row => {
+	var elrows = tzMap.forEach(row => {
 		// Representative TZ
 		var repTz = row[0][0];
 		// City
 		var elrow2 = document.createElement("tr");
-		tzhmtz.appendChild(elrow2);
 		if (row[0][0] === userTZ) {
 			elrow2.classList.add("viewer");
 		}
@@ -136,6 +147,7 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 		el_participants.innerHTML = `0`;
 		el_participants.classList.add("tzt");
 		elrow2.append(el_participants);
+		tzhmtz.appendChild(elrow2);
 
 		// Timezones
 		var elrow = document.createElement("tr");
@@ -150,47 +162,50 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 			tzLocalEnd = moment.tz(endTime, repTz);
 
 		// For each hour of the event.
-		row.slice(2).forEach((timePoint, index) => {
-			var elcell = document.createElement("td");
+		var cells = row.slice(2).map((timePoint, index) => {
 
 			var timeDay = mutTime.tz(repTz);
 			var isBefore = timeDay.isBefore(tzLocalStart),
 				isAfter = timeDay.isAfter(tzLocalEnd),
 				beforeNow = timeDay.isBefore(now);
 
-			elcell.classList.add(`c_${mutTime.tz("UTC").format("DD_HH")}`);
+			var classes = ['tzt', `c_${mutTime.tz("UTC").format("DD_HH")}`];
 			if (isBefore) {
-				elcell.classList.add(`before_start`);
+				classes.push(`before_start`);
 			} else if (isAfter) {
-				elcell.classList.add(`after_end`);
+				classes.push(`after_end`);
 			} else {
-				elcell.classList.add(`during`);
+				classes.push(`during`);
 			}
 			if (beforeNow) {
-				elcell.classList.add(`thepast`);
+				classes.push(`thepast`);
 			}
+			var cH = parseInt(timePoint[0]);
+			if (cH >= 8 && cH < 20) {
+				classes.push("work");
+			} else {
+				classes.push("sleep");
+			}
+			var elcell = `<td class="${classes.join(" ")}">`;
 
 			// Increase hours, unfortunately modifies own object.
 			mutTime.add(1, "hours");
 
 			if (timePoint[1] === "00") {
-				elcell.innerHTML = `<span class="h">${timePoint[0]}</span>`;
+				elcell += `<span class="h">${timePoint[0]}</span>`;
 			} else if (timePoint.length === 3) {
-				elcell.innerHTML = `<div class="mon">${timePoint[0]}</div><div class="day">${timePoint[1]}</div>`;
+				elcell += `<div class="mon">${timePoint[0]}</div><div class="day">${timePoint[1]}</div>`;
 			} else {
-				elcell.innerHTML = `<span class="h">${timePoint[0]}</span><span class="m">${timePoint[1]}</span>`;
+				elcell += `<span class="h">${timePoint[0]}</span><span class="m">${timePoint[1]}</span>`;
 			}
-			elrow.append(elcell);
-
-			var cH = parseInt(timePoint[0]);
-			elcell.classList.add("tzt");
-			if (cH >= 8 && cH < 20) {
-				elcell.classList.add("work");
-			} else {
-				elcell.classList.add("sleep");
-			}
+			return elcell + '</td>'
 		});
+		elrow.innerHTML = cells.join('')
 	});
+
+	var elrow3 = document.createElement("tr");
+	tzhmtz.appendChild(elrow3);
+	elrow3.innerHTML = `<td><div class="city">Totals</div></td><td id="t_h"/><td id="t_p" />`;
 }
 
 export function heatmapThings(participants, helpers, startTime) {
@@ -211,6 +226,8 @@ export function heatmapThings(participants, helpers, startTime) {
 		p.style.background = `rgba(0, 0, 255, ${pct})`;
 		p.style.color = getContrastColor(0, 0, 255, pct);
 	});
+	var p_sum = Object.keys(participants).map(tz => participants[tz]).reduce(arraySum);
+	document.getElementById('t_p').innerHTML = p_sum
 
 	// Heatmap helpers
 	helpers.forEach(helper => {
@@ -223,6 +240,9 @@ export function heatmapThings(participants, helpers, startTime) {
 		h.style.background = `rgba(0, 255, 0, ${pct})`;
 		h.style.color = getContrastColor(0, 255, 0, pct);
 	});
+	var h_sum = helpers.length;
+	document.getElementById('t_h').innerHTML = h_sum
+
 	var colHelpersKeys = Object.keys(collectedHelpers);
 	var colParticipantsKeys = Object.keys(collectedParticipants);
 
