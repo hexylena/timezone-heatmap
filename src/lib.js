@@ -81,11 +81,12 @@ export function relativeWorkingHours(participants) {
 
 export function tzTable(tzDisplay, tzReduced, workshopDays, magicHours, startTime) {
 	var k = Object.keys(tzReduced)
-	k.sort((a, b) => {return parseInt(a) > parseInt(b)});
+	k.sort(function( a , b ){
+		return parseInt(a) < parseInt(b) ? -1 : 1;
+	});
 	var earliest = tzReduced[Math.min(...k)][0];
 	return k.map(utcOff => {
 		var repTz = tzReduced[utcOff][0];
-
 		var converted = [...Array(24 * workshopDays + magicHours).keys()].map(hourN => {
 			var hour = leftpad("" + hourN, 2, "0"),
 				convertedTime = moment
