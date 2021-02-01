@@ -44,7 +44,6 @@ export function peopleWorkingThen(people, startTime) {
 			}
 			person[day].forEach(hour => {
 				var lpH = leftpad(hour, 2, "0");
-				// TODO: hardcoded time
 				var hm = moment.tz(`${moment(startTime).format('YYYY-MM-DD')}T${lpH}:00:00`, person.TZ).add(index, "days");
 				var cls = "c_" + hm.format("DD") + "_" + hm.tz("UTC").format("HH");
 
@@ -116,7 +115,7 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 		// City
 		var elrow2 = document.createElement("tr");
 		tzhmtz.appendChild(elrow2);
-		if (row[0] === userTZ) {
+		if (row[0][0] === userTZ) {
 			elrow2.classList.add("viewer");
 		}
 		row[0].slice(1).forEach((tz) => { elrow2.classList.add(tz) });
@@ -140,8 +139,7 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 		// Timezones
 		var elrow = document.createElement("tr");
 		elrow.id = "tr_" + repTz;
-		// TODO
-		if (row[0] === userTZ) {
+		if (row[0][0] === userTZ) {
 			elrow.classList.add("viewer");
 		}
 		tzhm.appendChild(elrow);
@@ -312,7 +310,7 @@ export function combinationTimeZoneHeatMap(config, helpers, participants, isLive
 	const now = ( isLive ? moment.tz(userTZ) : tzMap[0][1]);
 
 	// Create the table for every timezone.
-	renderTable(tzMap, userTZ, startTime, endTime, now);
+	renderTable(tzMap, repTzLookup[userTZ], startTime, endTime, now);
 
 	// Heatmap things to make them pretty
 	heatmapThings(participants, helpers, startTime);
