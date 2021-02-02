@@ -118,6 +118,14 @@ export function tzTable(tzDisplay, tzReduced, workshopDays, magicHours, startTim
 	})
 }
 
+export function getTzClasses(time, count){
+	var mutTime = moment(time);
+	return Array.from(Array(count).keys()).map((x) => {
+		var m = moment(mutTime).add(x, 'hours');
+		return `c_${m.tz("UTC").format("DD_HH")}`
+	})
+}
+
 export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 	const tzhm = document.getElementById("tzhm");
 	const tzhmtz = document.getElementById("tzhm-tz");
@@ -169,7 +177,7 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 				isAfter = timeDay.isAfter(tzLocalEnd),
 				beforeNow = timeDay.isBefore(now);
 
-			var classes = ['tzt', `c_${mutTime.tz("UTC").format("DD_HH")}`];
+			var classes = ['tzt', tzClasses[index]];
 			if (isBefore) {
 				classes.push(`before_start`);
 			} else if (isAfter) {
@@ -206,6 +214,15 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 	var elrow3 = document.createElement("tr");
 	tzhmtz.appendChild(elrow3);
 	elrow3.innerHTML = `<td><div class="city">Totals</div></td><td id="t_h"/><td id="t_p" />`;
+
+	var elrow4 = document.createElement("tr");
+	elrow4.id = "tr_totals";
+	tzhm.appendChild(elrow4);
+
+	elrow4.innerHTML = tzClasses.map((x) => {
+		return `<td class="${x}"></td>`
+	}).join('')
+
 }
 
 export function heatmapThings(participants, helpers, startTime) {
@@ -246,6 +263,14 @@ export function heatmapThings(participants, helpers, startTime) {
 	var colHelpersKeys = Object.keys(collectedHelpers);
 	var colParticipantsKeys = Object.keys(collectedParticipants);
 
+	var tmp = colParticipantsKeys.filter(onlyUnique).map(k => {
+		return (k in collectedParticipants) ? collectedParticipants[k].length : 0;
+	})
+	var maxParticipantsTime = Math.max(...tmp);
+	var zk = [...colParticipantsKeys].filter(onlyUnique);
+	zk.sort();
+	zk.forEach(k => { console.log(k) });
+
 	[...colHelpersKeys, ...colParticipantsKeys].filter(onlyUnique).forEach(k => {
 		// var pct = collectedHelpers[k].length / maxHelpers;
 		var hl = k in collectedHelpers ? collectedHelpers[k].length : 0,
@@ -256,6 +281,11 @@ export function heatmapThings(participants, helpers, startTime) {
 		document.querySelectorAll(`.${k}.work.during`).forEach(x => {
 			x.style.background = `rgba(0, 255, 0, ${pct})`;
 			x.setAttribute("title", `Ratio: ${hl}:${pl}, Instructors ${peeps}`);
+		});
+		document.querySelectorAll(`#tr_totals .${k}`).forEach(x => {
+			x.style.background = `rgba(0, 0, 255, ${pl / maxParticipantsTime})`;
+			x.style.color = getContrastColor(0, 0, 255, pl / maxParticipantsTime);
+			x.innerHTML = pl;
 		});
 		document.querySelectorAll(`.${k}.work.during.thepast`).forEach(x => {
 			x.style.background = `rgba(0, 0, 0, ${pct})`;
