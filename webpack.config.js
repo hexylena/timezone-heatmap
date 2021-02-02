@@ -13,13 +13,24 @@ module.exports = env => {
 				}
 			]
 		},
+		entry: {
+			main: './src/index.js',
+			timepoint: './src/timepoint.js',
+		},
 		output: {
 			path: path.resolve(__dirname, "docs")
 		},
 		plugins: [
 			new HtmlWebpackPlugin({
 				publicPath: env.WEBPACK_BUNDLE ? "/timezone-heatmap" : "/",
-				template: path.resolve(__dirname, "src", "index.html")
+				template: path.resolve(__dirname, "src", "index.html"),
+				chunks: ['main'],
+			}),
+			new HtmlWebpackPlugin({
+				publicPath: env.WEBPACK_BUNDLE ? "/timezone-heatmap/" : "/",
+				template: path.resolve(__dirname, "src", "timepoint.html"),
+				filename: "timepoint.html",
+				chunks: ['timepoint'],
 			}),
 			// To keep all zones but limit data to specific years, use the year range options
 			new MomentTimezoneDataPlugin({

@@ -24,6 +24,14 @@ td.thepast.sleep {
 	background: red;
 }
 
+body.point .during.work{
+	background: #cfc;
+}
+body.point td.before_start.work, body.point td.after_end.work {
+	color: black;
+	background: #ccc;
+}
+
 .city {
 	font-size: 120%;
 	font-weight: bold;
@@ -67,3 +75,4 @@ tr.viewer td {
 	border-top: 2px solid red;
 	border-bottom: 2px solid red;
 }
+

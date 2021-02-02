@@ -9,6 +9,27 @@ export function getContrastColor(R, G, B, A) {
 	return brightness > 186 ? "#000000" : "#FFFFFF";
 }
 
+const DEFAULT_TZs = [
+	"Africa/Abidjan", "Africa/Accra", "Africa/Algiers", "Africa/Cairo",
+	"Africa/Johannesburg", "Africa/Khartoum", "Africa/Lagos", "Africa/Nairobi",
+	"Africa/Windhoek", "America/Argentina/Cordoba", "America/Bogota",
+	"America/Chicago", "America/Denver", "America/Edmonton", "America/Lima",
+	"America/Los_Angeles", "America/Mexico_City", "America/New_York",
+	"America/Santiago", "America/Sao_Paulo", "America/Toronto", "America/Winnipeg",
+	"Asia/Baghdad", "Asia/Bangkok", "Asia/Damascus", "Asia/Dhaka",
+	"Asia/Ho_Chi_Minh", "Asia/Hong_Kong", "Asia/Jakarta", "Asia/Jerusalem",
+	"Asia/Karachi", "Asia/Kathmandu", "Asia/Kolkata", "Asia/Kuala_Lumpur",
+	"Asia/Manila", "Asia/Qatar", "Asia/Riyadh", "Asia/Seoul", "Asia/Shanghai",
+	"Asia/Singapore", "Asia/Tehran", "Asia/Tokyo", "Australia/Melbourne",
+	"Australia/Sydney", "Europe/Amsterdam", "Europe/Athens", "Europe/Belgrade",
+	"Europe/Berlin", "Europe/Bucharest", "Europe/Budapest", "Europe/Copenhagen",
+	"Europe/Dublin", "Europe/Istanbul", "Europe/Kiev", "Europe/Lisbon",
+	"Europe/London", "Europe/Madrid", "Europe/Malta", "Europe/Moscow",
+	"Europe/Oslo", "Europe/Paris", "Europe/Prague", "Europe/Riga", "Europe/Rome",
+	"Europe/Sofia", "Europe/Tallinn", "Europe/Warsaw",
+	"Pacific/Auckland"
+];
+
 export function onlyUnique(value, index, self) {
 	return self.indexOf(value) === index;
 }
@@ -53,12 +74,21 @@ export function peopleWorkingThen(people, startTime) {
 
 	var namesByClass = {};
 	people.forEach(person => {
+		if(person.TZ == 'Pacific/Auckland') {
+			console.log(person)
+		}
 		daysOfWeek.forEach((day, index) => {
+			if(person.TZ == 'Pacific/Auckland') {
+				console.log('  ', day, index)
+			}
 			if (person[day] === undefined) {
 				return;
 			}
 			person[day].forEach(hour => {
 				var cls = memoPersonWorking(fmtStart, hour, person.TZ, index);
+				if(person.TZ == 'Pacific/Auckland') {
+					console.log('    ', cls);
+				}
 
 				if (namesByClass[cls] === undefined) {
 					namesByClass[cls] = [];
@@ -126,9 +156,11 @@ export function getTzClasses(time, count){
 	})
 }
 
-export function renderTable(tzMap, userTZ, startTime, endTime, now) {
+export function renderTable(tzMap, userTZ, startTime, endTime, now, enableTotals) {
 	const tzhm = document.getElementById("tzhm");
 	const tzhmtz = document.getElementById("tzhm-tz");
+	const tzClasses = getTzClasses(tzMap[0][1], tzMap[0].slice(2).length);
+	console.log(tzMap[0])
 
 	var elrows = tzMap.forEach(row => {
 		// Representative TZ
@@ -211,17 +243,19 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now) {
 		elrow.innerHTML = cells.join('')
 	});
 
-	var elrow3 = document.createElement("tr");
-	tzhmtz.appendChild(elrow3);
-	elrow3.innerHTML = `<td><div class="city">Totals</div></td><td id="t_h"/><td id="t_p" />`;
+	if(enableTotals){
+		var elrow3 = document.createElement("tr");
+		tzhmtz.appendChild(elrow3);
+		elrow3.innerHTML = `<td><div class="city">Totals</div></td><td id="t_h"/><td id="t_p" />`;
 
-	var elrow4 = document.createElement("tr");
-	elrow4.id = "tr_totals";
-	tzhm.appendChild(elrow4);
+		var elrow4 = document.createElement("tr");
+		elrow4.id = "tr_totals";
+		tzhm.appendChild(elrow4);
 
-	elrow4.innerHTML = tzClasses.map((x) => {
-		return `<td class="${x}"></td>`
-	}).join('')
+		elrow4.innerHTML = tzClasses.map((x) => {
+			return `<td class="${x}"></td>`
+		}).join('')
+	}
 
 }
 
@@ -268,8 +302,8 @@ export function heatmapThings(participants, helpers, startTime) {
 	})
 	var maxParticipantsTime = Math.max(...tmp);
 	var zk = [...colParticipantsKeys].filter(onlyUnique);
-	zk.sort();
-	zk.forEach(k => { console.log(k) });
+	//zk.sort();
+	//zk.forEach(k => { console.log(k) });
 
 	[...colHelpersKeys, ...colParticipantsKeys].filter(onlyUnique).forEach(k => {
 		// var pct = collectedHelpers[k].length / maxHelpers;
@@ -316,25 +350,28 @@ export function coerceTimezones(folks, repTzLookup){
 	}
 }
 
-export function combinationTimeZoneHeatMap(config, helpers, participants, isLive) {
+export function tzhmTimepointView(date, time, tz, name){
+	setTitle(`In my time: ${name}`);
 	const userTZ = moment.tz.guess();
-	const magicHours = 9;
-
-	const startTime = config.start;
-	const endTime = config.end;
-	const workshopDays = moment(endTime).diff(moment(startTime), "days") + 1;
+	const startTime = moment.tz(`${date}T${time}`, tz)
+	const endTime = moment.tz(`${date}T${time}`, tz).add(30, 'minutes');
 	const startMoment = moment(startTime);
+	var [tzDisplay, tzReduced, repTzLookup] = reduceTimezones([...DEFAULT_TZs, tz, userTZ], startMoment)
+	// Table
+	var tzMap = tzTable(tzDisplay, tzReduced, 1, 0, moment(startTime).subtract(10, 'hours'));
+	// Create the table for every timezone.
+	renderTable(tzMap, repTzLookup[userTZ], startTime, endTime, tzMap[0][1], false);
+}
 
-	var newtitle = `Time Zone Heat Map: ${config.title}`;
-	document.getElementById('title').textContent = newtitle;
-	document.title = newtitle;
 
-	// We'll calculate the time in each of these.
-	var tzDisplay = [...Object.keys(participants), ...helpers.map(x => x.TZ), userTZ].filter(onlyUnique);
+export function reduceTimezones(inputs, startMoment){
+	var tzDisplay = [...inputs].filter(onlyUnique);
 	// Remove invalid timezones.
 	tzDisplay = tzDisplay.filter((x) => { return moment.tz.zone(x); })
 	// Sort by their utcOffset
-	tzDisplay.sort((a, b) => moment.tz.zone(a).utcOffset(startMoment) > moment.tz.zone(b).utcOffset(startMoment));
+	tzDisplay.sort((a, b) => {
+		return moment.tz.zone(a).utcOffset(startMoment) > moment.tz.zone(b).utcOffset(startMoment) ? -1 : 1;
+	});
 
 	// Reduce by their TZ offset, don't need 50 european states all reducing to Europe/Paris
 	var tzReduced = {};
@@ -352,6 +389,28 @@ export function combinationTimeZoneHeatMap(config, helpers, participants, isLive
 		repTzLookup[tz] = tzReduced[k][0];
 	})
 
+	return [tzDisplay, tzReduced, repTzLookup]
+}
+
+export function setTitle(title){
+	document.getElementById('title').textContent = title;
+	document.title = title;
+}
+
+export function combinationTimeZoneHeatMap(config, helpers, participants, isLive) {
+	const userTZ = moment.tz.guess();
+	const magicHours = 9;
+
+	const startTime = config.start;
+	const endTime = config.end;
+	const workshopDays = moment(endTime).diff(moment(startTime), "days") + 1;
+	const startMoment = moment(startTime);
+
+	setTitle(`Time Zone Heat Map: ${config.title}`);
+
+	// We'll calculate the time in each of these.
+	var [tzDisplay, tzReduced, repTzLookup] = reduceTimezones([...Object.keys(participants), ...helpers.map(x => x.TZ), userTZ], startMoment)
+
 	participants = coerceTimezones(participants, repTzLookup);
 	helpers = coerceTimezones(helpers, repTzLookup);
 
@@ -361,7 +420,7 @@ export function combinationTimeZoneHeatMap(config, helpers, participants, isLive
 	const now = ( isLive ? moment.tz(userTZ) : tzMap[0][1]);
 
 	// Create the table for every timezone.
-	renderTable(tzMap, repTzLookup[userTZ], startTime, endTime, now);
+	renderTable(tzMap, repTzLookup[userTZ], startTime, endTime, now, true);
 
 	// Heatmap things to make them pretty
 	heatmapThings(participants, helpers, startTime);
