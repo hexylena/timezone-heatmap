@@ -58,7 +58,7 @@ body.point td.before_start.work, body.point td.after_end.work {
 }
 
 #tzhm {
-	overflow-x: scroll;
+	overflow-x: auto;
 	width: 80%;
 	display: block;
 }

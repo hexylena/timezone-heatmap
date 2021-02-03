@@ -175,18 +175,20 @@ export function renderTable(tzMap, userTZ, startTime, endTime, now, enableTotals
 		var elcell = document.createElement("td");
 		elcell.innerHTML = `<div class="city" title="This includes ${row[0].join(', ')}">${repTz}</div><div class="offset">${row[1].format()}</div>`;
 		elrow2.append(elcell);
-		// Helpers
-		var el_helpers = document.createElement("td");
-		el_helpers.id = `h_${repTz}`;
-		el_helpers.innerHTML = `0`;
-		el_helpers.classList.add("tzt");
-		elrow2.append(el_helpers);
-		// Participants
-		var el_participants = document.createElement("td");
-		el_participants.id = `p_${repTz}`;
-		el_participants.innerHTML = `0`;
-		el_participants.classList.add("tzt");
-		elrow2.append(el_participants);
+		if(enableTotals){
+			// Helpers
+			var el_helpers = document.createElement("td");
+			el_helpers.id = `h_${repTz}`;
+			el_helpers.innerHTML = `0`;
+			el_helpers.classList.add("tzt");
+			elrow2.append(el_helpers);
+			// Participants
+			var el_participants = document.createElement("td");
+			el_participants.id = `p_${repTz}`;
+			el_participants.innerHTML = `0`;
+			el_participants.classList.add("tzt");
+			elrow2.append(el_participants);
+		}
 		tzhmtz.appendChild(elrow2);
 
 		// Timezones
