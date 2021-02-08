@@ -286,6 +286,10 @@ export function heatmapThings(participants, helpers, startTime) {
 	helpers.forEach(helper => {
 		// Count our helpers
 		var h = document.getElementById(`h_${helper.TZ}`);
+		if(h === null) {
+			console.log(`Could not find TZ ${helper.TZ}`)
+			return;
+		}
 		var h_count = parseInt(h.innerHTML) + 1;
 		h.innerHTML = h_count;
 		h.setAttribute("title", `${h_count} Helpers`);
@@ -315,7 +319,7 @@ export function heatmapThings(participants, helpers, startTime) {
 		var peeps = k in collectedHelpers ? collectedHelpers[k].filter(onlyUnique).join(", ") : "NONE";
 
 		document.querySelectorAll(`.${k}.work.during`).forEach(x => {
-			x.style.background = `rgba(0, 255, 0, ${pct})`;
+			x.style.background = `rgba(0, 255, 0, ${pct * 10})`;
 			x.setAttribute("title", `Ratio: ${hl}:${pl}, Instructors ${peeps}`);
 		});
 		document.querySelectorAll(`#tr_totals .${k}`).forEach(x => {
