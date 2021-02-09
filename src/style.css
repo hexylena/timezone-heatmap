@@ -76,3 +76,6 @@ tr.viewer td {
 	border-bottom: 2px solid red;
 }
 
+#tr_totals td {
+	text-align: center;
+}

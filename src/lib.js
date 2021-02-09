@@ -2,7 +2,7 @@ const moment = require("moment-timezone");
 
 // https://stackoverflow.com/questions/3942878/how-to-decide-font-color-in-white-or-black-depending-on-background-color/58427960#58427960
 export const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-export const workingHours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+export const workingHours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 const arraySum = (accumulator, currentValue) => accumulator + currentValue;
 export function getContrastColor(R, G, B, A) {
 	const brightness = R * 0.299 + G * 0.587 + B * 0.114 + (1 - A) * 255;
@@ -51,7 +51,7 @@ export function memoPersonWorking(fmtStart, hour, tz, index){
 	var k = `${fmtStart}/${hour}/${tz}/${index}`;
 	if(!(k in memo)){
 		var hm = moment.tz(`${fmtStart}T${leftpad(hour, 2, "0")}:00:00`, tz).add(index, "days");
-		var cls = "c_" + hm.format("DD") + "_" + hm.tz("UTC").format("HH");
+		var cls = "c_" + hm.tz("UTC").format("DD_HH");
 		memo[k] = cls;
 	}
 	return memo[k];
@@ -74,21 +74,21 @@ export function peopleWorkingThen(people, startTime) {
 
 	var namesByClass = {};
 	people.forEach(person => {
-		if(person.TZ == 'Pacific/Auckland') {
-			console.log(person)
-		}
+		//if(person.Name == 'Saskia Hiltemann') {
+			//console.log(person)
+		//}
 		daysOfWeek.forEach((day, index) => {
-			if(person.TZ == 'Pacific/Auckland') {
-				console.log('  ', day, index)
-			}
+			//if(person.Name == 'Saskia Hiltemann') {
+				//console.log('  ', day, index)
+			//}
 			if (person[day] === undefined) {
 				return;
 			}
 			person[day].forEach(hour => {
 				var cls = memoPersonWorking(fmtStart, hour, person.TZ, index);
-				if(person.TZ == 'Pacific/Auckland') {
-					console.log('    ', cls);
-				}
+				//if(person.Name == 'Saskia Hiltemann') {
+					//console.log('    ', cls);
+				//}
 
 				if (namesByClass[cls] === undefined) {
 					namesByClass[cls] = [];
@@ -122,19 +122,35 @@ export function relativeWorkingHours(participants) {
 	return final;
 }
 
-export function tzTable(tzDisplay, tzReduced, workshopDays, magicHours, startTime) {
+export function findEarliest(tzReduced) {
+	var k = Object.keys(tzReduced)
+	k.sort(function( a , b ){
+		return parseInt(a) < parseInt(b) ? -1 : 1;
+	});
+	return tzReduced[Math.min(...k)][0];
+}
+
+export function tzTable(tzDisplay, tzReduced, workshopDays, startTime, endTime) {
 	var k = Object.keys(tzReduced)
 	k.sort(function( a , b ){
 		return parseInt(a) < parseInt(b) ? -1 : 1;
 	});
 	var earliest = tzReduced[Math.min(...k)][0];
+	var latest = tzReduced[Math.max(...k)][0];
+	//console.log(earliest, latest)
+
+	var m1 = moment.tz(startTime, earliest)
+	var m2 = moment.tz(endTime, latest)
+
+	var duration = moment.duration(m2.diff(m1)).asHours();
+
 	return k.map(utcOff => {
 		var repTz = tzReduced[utcOff][0];
 		var inconvtime = moment
-			.tz(startTime, tzDisplay[0])
-			.tz(repTz);
+			.tz(startTime, earliest)
+			.tz(repTz)
 
-		var converted = [...Array(24 * workshopDays + magicHours).keys()].map(hourN => {
+		var converted = [...Array(duration).keys()].map(hourN => {
 			var convertedTime = moment(inconvtime).add(hourN, "hours"),
 				h = parseInt(convertedTime.format("H"));
 
@@ -148,19 +164,18 @@ export function tzTable(tzDisplay, tzReduced, workshopDays, magicHours, startTim
 	})
 }
 
-export function getTzClasses(time, count){
-	var mutTime = moment(time);
+export function getTzClasses(time, tz, count){
+	var mutTime = moment(time, tz);
 	return Array.from(Array(count).keys()).map((x) => {
 		var m = moment(mutTime).add(x, 'hours');
 		return `c_${m.tz("UTC").format("DD_HH")}`
 	})
 }
 
-export function renderTable(tzMap, userTZ, startTime, endTime, now, enableTotals) {
+export function renderTable(tzMap, userTZ, startTime, endTime, now, enableTotals, earliest) {
 	const tzhm = document.getElementById("tzhm");
 	const tzhmtz = document.getElementById("tzhm-tz");
-	const tzClasses = getTzClasses(tzMap[0][1], tzMap[0].slice(2).length);
-	console.log(tzMap[0])
+	const tzClasses = getTzClasses(tzMap[0][1], 'Pacific/Auckland', tzMap[0].slice(2).length);
 
 	var elrows = tzMap.forEach(row => {
 		// Representative TZ
@@ -287,7 +302,7 @@ export function heatmapThings(participants, helpers, startTime) {
 		// Count our helpers
 		var h = document.getElementById(`h_${helper.TZ}`);
 		if(h === null) {
-			console.log(`Could not find TZ ${helper.TZ}`)
+			console.log(`Could not find TZ for ${helper.name}: ${helper.TZ}`)
 			return;
 		}
 		var h_count = parseInt(h.innerHTML) + 1;
@@ -310,6 +325,7 @@ export function heatmapThings(participants, helpers, startTime) {
 	var zk = [...colParticipantsKeys].filter(onlyUnique);
 	//zk.sort();
 	//zk.forEach(k => { console.log(k) });
+	//
 
 	[...colHelpersKeys, ...colParticipantsKeys].filter(onlyUnique).forEach(k => {
 		// var pct = collectedHelpers[k].length / maxHelpers;
@@ -340,7 +356,6 @@ export function coerceTimezones(folks, repTzLookup){
 			x.TZ = repTzLookup[x.TZ];
 			return x;
 		})
-		console.log(folks)
 		return folks;
 	} else {
 		var fixedParticipants = {};
@@ -364,7 +379,7 @@ export function tzhmTimepointView(date, time, tz, name){
 	const startMoment = moment(startTime);
 	var [tzDisplay, tzReduced, repTzLookup] = reduceTimezones([...DEFAULT_TZs, tz, userTZ], startMoment)
 	// Table
-	var tzMap = tzTable(tzDisplay, tzReduced, 1, 0, moment(startTime).subtract(10, 'hours'));
+	var tzMap = tzTable(tzDisplay, tzReduced, 1, moment(startTime).subtract(10, 'hours'), moment(startTime).add(10, 'hours'));
 	// Create the table for every timezone.
 	renderTable(tzMap, repTzLookup[userTZ], startTime, endTime, tzMap[0][1], false);
 }
@@ -405,7 +420,6 @@ export function setTitle(title){
 
 export function combinationTimeZoneHeatMap(config, helpers, participants, isLive) {
 	const userTZ = moment.tz.guess();
-	const magicHours = 9;
 
 	const startTime = config.start;
 	const endTime = config.end;
@@ -421,7 +435,8 @@ export function combinationTimeZoneHeatMap(config, helpers, participants, isLive
 	helpers = coerceTimezones(helpers, repTzLookup);
 
 	// Table
-	var tzMap = tzTable(tzDisplay, tzReduced, workshopDays, magicHours, startTime);
+	var earliest = findEarliest(tzReduced);
+	var tzMap = tzTable(tzDisplay, tzReduced, workshopDays, startTime, endTime);
 
 	const now = ( isLive ? moment.tz(userTZ) : tzMap[0][1]);
 
