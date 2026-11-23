@@ -16,6 +16,7 @@ module.exports = env => {
 		entry: {
 			main: './src/index.js',
 			timepoint: './src/timepoint.js',
+			gtn: './src/gtn.js',
 		},
 		output: {
 			path: path.resolve(__dirname, "docs")
