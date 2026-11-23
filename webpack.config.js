@@ -33,6 +33,12 @@ module.exports = env => {
 				filename: "timepoint.html",
 				chunks: ['timepoint'],
 			}),
+			new HtmlWebpackPlugin({
+				publicPath: env.WEBPACK_BUNDLE ? "/timezone-heatmap/" : "/",
+				template: path.resolve(__dirname, "src", "gtn.html"),
+				filename: "gtn.html",
+				chunks: ['gtn'],
+			}),
 			// To keep all zones but limit data to specific years, use the year range options
 			new MomentTimezoneDataPlugin({
 				startYear: currentYear - 1,
